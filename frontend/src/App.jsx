@@ -8,6 +8,7 @@ import UserLogin from './pages/UserLogin'
 import Dashboard from './pages/Dashboard'
 import UserSignup from './pages/UserSignup'
 import Sidebar from './components/SideBar'
+import Profile from './pages/Profile'
 
 function App() {
   const location = useLocation()
@@ -23,6 +24,7 @@ function App() {
           <Route path="/" element={<Dashboard/>}/>
           <Route path="/login" element={<UserLogin/>}/>
           <Route path="/signup" element={<UserSignup/>} />
+          <Route path="/profile" element={<Profile/>}></Route>
         </Routes>
       </div>
     </div>
