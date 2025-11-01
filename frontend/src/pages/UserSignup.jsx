@@ -33,7 +33,7 @@ const UserSignup = () => {
             setUser(data.user);
             localStorage.setItem("token", data.token);
             // Redirect to home page after successful signup
-            navigate("/");
+            navigate("/profile");
         }
         // setUserData({ 
         //     fullName:{
