@@ -37,7 +37,7 @@ const Sidebar = () => {
                 <NavLink key={index} to={link.path} end className={({isActive}) => 
                     `relative flex items-center 
                     max-md:justify-center gap-2 w-full py-2.5 min-md:pl-10 first:mt-7 mt-7 
-                    ${isActive ? 'bg-[#D9D9D9] text-[#266ECD]' : 'text-purple-100 hover:bg-purple-800 hover:text-yellow-200'} group transition-colors duration-200`
+                    ${isActive ? 'bg-[#D9D9D9] text-[#266ECD]' : 'text-purple-100 hover:bg-[#006eff] hover:text-white'} group transition-colors duration-200`
                 }>
                     {({isActive})=>(
                         <>
