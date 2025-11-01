@@ -36,6 +36,7 @@ userSchema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password , this.password);
 }
 
+// used bcrypt for encrypting the data using hashing algorithmn
 userSchema.statics.hashPassword = async function(password){
     return await bcrypt.hash(password , 10);
 }
