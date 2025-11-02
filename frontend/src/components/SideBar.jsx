@@ -1,6 +1,7 @@
 import React from 'react'
-import { BookMarked, LayoutDashboardIcon, ListCollapseIcon, ListIcon, MessageCircleMore, PlusSquareIcon, RectangleVerticalIcon, Settings, UserIcon, UserSearchIcon } from 'lucide-react'
+import { BookMarked, LayoutDashboardIcon, ListCollapseIcon, ListIcon, LogOut, MessageCircleMore, PlusSquareIcon, RectangleVerticalIcon, Settings, UserIcon, UserSearchIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useContext } from 'react'
 import { UserContextData } from '../context/UserContext'
 
@@ -28,12 +29,17 @@ const Sidebar = () => {
   return (
     <div className='h-100% md:flex flex-col items-center
     max-w-13 md:max-w-60 w-full border-r border-gray-300/20 text-sm bg-[#266ECD] text-white'>
-        <img src="logo.png" alt="" className='w-[60%] mr-20 mb-2'/>
-        <div className='flex gap-4 mr-10'>
+        <div className="flex max-lg:flex-col">
+        <img src="logo.png" alt="" className='w-[60%] mr-10 mb-2'/>
+        <Link to="/user/logout" className="h-10 w-10 bg-white flex items-center justify-center rounded-full mt-[8%] cursor-pointer mb-5">
+            <LogOut className='text-black'/>
+        </Link>
+        </div>
+        <div className='flex gap-4'>
             <img src={users.imageUrl} alt="sidebar" className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto border-2 border-white'/>
             <div className="flex flex-col">
                 <p className='mt-2 text-base max-md:hidden font-semibold'>{user.fullname.firstname} {users.lastname}</p>
-                <p className='text-xs'>HR Manager</p>
+                <p className='text-xs max-md:hidden block'>HR Manager</p>
             </div>
         </div>
         <div className='w-full'>
