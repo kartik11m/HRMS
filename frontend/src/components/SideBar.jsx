@@ -1,12 +1,16 @@
 import React from 'react'
 import { BookMarked, LayoutDashboardIcon, ListCollapseIcon, ListIcon, MessageCircleMore, PlusSquareIcon, RectangleVerticalIcon, Settings, UserIcon, UserSearchIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { useContext } from 'react'
+import { UserContextData } from '../context/UserContext'
 
 const Sidebar = () => {
 
-    const user = {
-        firstName : 'Admin',
-        lastName : 'User',
+    const {user} = useContext(UserContextData);
+
+    const users = {
+        firstname : user.fullname.firstname,
+        lastname : user.fullname.lastname,
         imageUrl : "https://static.vecteezy.com/system/resources/previews/002/318/271/original/user-profile-icon-free-vector.jpg",
     }
 
@@ -26,9 +30,9 @@ const Sidebar = () => {
     max-w-13 md:max-w-60 w-full border-r border-gray-300/20 text-sm bg-[#266ECD] text-white'>
         <img src="logo.png" alt="" className='w-[60%] mr-20 mb-2'/>
         <div className='flex gap-4 mr-10'>
-            <img src={user.imageUrl} alt="sidebar" className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto border-2 border-white'/>
+            <img src={users.imageUrl} alt="sidebar" className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto border-2 border-white'/>
             <div className="flex flex-col">
-                <p className='mt-2 text-base max-md:hidden font-semibold'>{user.firstName} {user.lastName}</p>
+                <p className='mt-2 text-base max-md:hidden font-semibold'>{user.fullname.firstname} {users.lastname}</p>
                 <p className='text-xs'>HR Manager</p>
             </div>
         </div>
