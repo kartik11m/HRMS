@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard'
 import UserSignup from './pages/UserSignup'
 import Sidebar from './components/SideBar'
 import Profile from './pages/Profile'
+import UserLogout from './pages/UserLogout'
+import UserProtectedWrapper from './pages/UserProtectedWrapper'
 
 function App() {
   const location = useLocation()
@@ -24,7 +26,12 @@ function App() {
           <Route path="/" element={<Dashboard/>}/>
           <Route path="/login" element={<UserLogin/>}/>
           <Route path="/signup" element={<UserSignup/>} />
-          <Route path="/profile" element={<Profile/>}></Route>
+          <Route path="/profile" element={
+            <UserProtectedWrapper><Profile/></UserProtectedWrapper>
+            }></Route>
+          <Route path="/user/logout"
+          element={<UserLogout/>}>
+          </Route>
         </Routes>
       </div>
     </div>
