@@ -10,8 +10,6 @@ const Sidebar = () => {
     const {user} = useContext(UserContextData);
 
     const users = {
-        firstname : user.fullname.firstname,
-        lastname : user.fullname.lastname,
         imageUrl : "https://static.vecteezy.com/system/resources/previews/002/318/271/original/user-profile-icon-free-vector.jpg",
     }
 
@@ -38,7 +36,7 @@ const Sidebar = () => {
         <div className='flex gap-4'>
             <img src={users.imageUrl} alt="sidebar" className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto border-2 border-white'/>
             <div className="flex flex-col">
-                <p className='mt-2 text-base max-md:hidden font-semibold'>{user.fullname.firstname} {users.lastname}</p>
+                <p className='mt-2 text-base max-md:hidden font-semibold'>{user.fullname.firstname} {user.fullname.lastname}</p>
                 <p className='text-xs max-md:hidden block'>HR Manager</p>
             </div>
         </div>
