@@ -1,7 +1,7 @@
 import React from 'react'
 import { UserContextData } from '../context/UserContext';
 import { useContext } from 'react';
-import { BookMarked, Clock, Download, Heart, LanguagesIcon, Laptop, LayoutDashboardIcon, ListCollapseIcon, ListIcon, Locate, LogOut, MessageCircleMore, PlaySquareIcon, PlusSquareIcon, RectangleVerticalIcon, Settings, Trash, UserIcon, UserSearchIcon } from 'lucide-react'
+import { BookMarked, Clock, Download, Hamburger, HamburgerIcon, Heart, LanguagesIcon, Laptop, LayoutDashboardIcon, ListCollapseIcon, ListIcon, Locate, LogOut, MenuSquareIcon, MessageCircleMore, PlaySquareIcon, PlusSquareIcon, RectangleVerticalIcon, Settings, Trash, UserIcon, UserSearchIcon } from 'lucide-react'
 
 const Profile = () => {
 
@@ -25,7 +25,12 @@ const Profile = () => {
 
   return (
     <div className='ml-[2%] mt-[2%]'>
-      <h1 className='text-2xl font-semibold'>My Profile</h1>
+      <div className="flex justify-between">
+        <h1 className='text-2xl font-semibold'>My Profile</h1>
+        <button>
+          <MenuSquareIcon className='h-10 w-8'/>
+        </button>
+      </div>
       <div className='border w-[17%]'></div>
       <div className='flex gap-2 mt-3'>
             <div className='mt-[1%]'>
