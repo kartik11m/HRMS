@@ -27,7 +27,7 @@ const Profile = () => {
     <div className='ml-[2%] mt-[2%]'>
       <div className="flex justify-between">
         <h1 className='text-2xl font-semibold'>My Profile</h1>
-        <button>
+        <button className='cursor-pointer'>
           <MenuSquareIcon className='h-10 w-8'/>
         </button>
       </div>
