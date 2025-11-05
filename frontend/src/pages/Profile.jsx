@@ -1,17 +1,16 @@
 import React, { useState,useRef } from 'react'
 import { UserContextData } from '../context/UserContext';
 import { useContext } from 'react';
-import { BookMarked, Clock, CrossIcon, Download, Hamburger, HamburgerIcon, Heart, LanguagesIcon, Laptop, LayoutDashboardIcon, ListCollapseIcon, ListIcon, Locate, LogOut, MenuSquareIcon, MessageCircleMore, PlaySquareIcon, PlusSquareIcon, RectangleVerticalIcon, Settings, Trash, UserIcon, UserSearchIcon, X } from 'lucide-react'
-import {useNavigate} from "react-router-dom";
+import { Clock, Download, Heart, LanguagesIcon, Laptop, Locate, LogOut, MenuSquareIcon, PlaySquareIcon, Settings, Trash, UserIcon, X } from 'lucide-react'
 import {gsap} from "gsap";
 import {useGSAP} from "@gsap/react"
+import { Link } from 'react-router-dom';
 
 const Profile = () => {
 
   const menuPanelRef = React.useRef(null);
   const [openMenu,setOpenMenu] = useState(false);
 
-  const navigate = useNavigate();
 
   useGSAP(() => {
   if (openMenu && menuPanelRef.current) {
@@ -97,10 +96,10 @@ const Profile = () => {
                   <Settings className="w-5 h-5 text-gray-400" />
                   <p className="text-base text-gray-400 font-medium">Settings</p>
                 </div>
-                <div className='flex items-center gap-4 mb-2'>
+                <Link to="/user/logout" className='flex items-center gap-4 mb-2'>
                   <LogOut className="w-5 h-5 text-red-600" />
                   <p className="text-base text-red-600 font-medium cursor-pointer">Logout</p>
-                </div>
+                </Link>
               </div>
               <div onClick={handleCloseMenu} className="cursor-pointer">
                 <X/>
