@@ -11,6 +11,7 @@ import Sidebar from './components/SideBar'
 import Profile from './pages/Profile'
 import UserLogout from './pages/UserLogout'
 import UserProtectedWrapper from './pages/UserProtectedWrapper'
+import SettingsPage from './pages/Settings'
 
 function App() {
   const location = useLocation()
@@ -29,6 +30,7 @@ function App() {
           <Route path="/profile" element={
             <UserProtectedWrapper><Profile/></UserProtectedWrapper>
             }></Route>
+          <Route path='/settings' element={<SettingsPage/>}></Route>
           <Route path="/user/logout"
           element={<UserLogout/>}>
           </Route>
