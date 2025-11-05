@@ -65,7 +65,7 @@ const Profile = () => {
         <h1 className='text-2xl font-semibold'>My Profile</h1>
         <div>
           <button className="cursor-pointer" onClick={() => setOpenMenu(true)}>
-            <MenuSquareIcon className="h-10 w-8" />
+            <MenuSquareIcon className="h-10 w-8 mr-12" />
           </button>
 
           <div
@@ -119,17 +119,22 @@ const Profile = () => {
                 <button className='bg-blue-500 text-white mt-2 rounded-2xl'>Edit Profile</button>
             </div>
         </div>
-        <div className='ml-[3%] mt-9'>
+        <div className="flex">
+          <div className='ml-[3%] mt-9 w-[60%]'>
             {ProfileLogs.map(((link,index)=>( 
             <div key={index} className='mb-5'>
                 <div className='flex items-center gap-4'>
                   <link.icon className='w-5 h-5 text-gray-700' />
                   <p className='text-base font-medium'>{link.name}</p>
                 </div>
-                <div className='mt-2 border-b border-gray-300 w-[50%]'></div>
+                <div className='mt-2 border-b border-gray-300 w-[80%]'></div>
             </div>
 
             )))}
+          </div>
+          <div>
+            <img src="profileR.png" alt="" className=" h-auto object-cover rounded-lg shadow-md mr-20 mt-15"/>
+          </div>
         </div>
     </div>
   )
