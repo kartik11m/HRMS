@@ -12,6 +12,7 @@ import Profile from './pages/Profile'
 import UserLogout from './pages/UserLogout'
 import UserProtectedWrapper from './pages/UserProtectedWrapper'
 import SettingsPage from './pages/Settings'
+import Chat from './pages/Chat'
 
 function App() {
   const location = useLocation()
@@ -27,6 +28,7 @@ function App() {
           <Route path="/" element={<Dashboard/>}/>
           <Route path="/login" element={<UserLogin/>}/>
           <Route path="/signup" element={<UserSignup/>} />
+          <Route path='/chat' element={<Chat/>}/>
           <Route path="/profile" element={
             <UserProtectedWrapper><Profile/></UserProtectedWrapper>
             }></Route>
