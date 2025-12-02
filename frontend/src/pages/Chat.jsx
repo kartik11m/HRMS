@@ -1,248 +1,234 @@
-import React, { useState } from 'react'
+import React, { useState, useContext, useEffect, useRef } from 'react'
+import { UserContextData } from '../context/UserContext'
+import { io } from "socket.io-client";
+import axios from 'axios';
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      name: 'Meg Griffin',
-      role: 'Web Dev,Django Guy',
-      message: 'Sent you a message',
-      time: '34m',
-      avatar: 'M',
-      unread: true,
-      status: 'online'
-    },
-    {
-      id: 2,
-      name: 'The Boyz',
-      role: 'joe68: sent a message',
-      message: 'Group message',
-      time: '34m',
-      avatar: 'B',
-      unread: true,
-      status: 'online'
-    },
-    {
-      id: 3,
-      name: 'Stewie Griffin',
-      role: 'Sent you a message',
-      message: 'Group message',
-      time: '17h',
-      avatar: 'S',
-      unread: false,
-      status: 'offline'
-    },
-    {
-      id: 4,
-      name: 'Glenn Quagmire',
-      role: 'The silence lmaoo',
-      message: 'Message',
-      time: '20h',
-      avatar: 'G',
-      unread: false,
-      status: 'offline'
-    },
-    {
-      id: 5,
-      name: 'Herbert',
-      role: 'Active',
-      message: 'Message',
-      time: '6m ago',
-      avatar: 'H',
-      unread: false,
-      status: 'online'
+  const { user } = useContext(UserContextData);
+
+  const [messages, setMessages] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [onlineUserIds, setOnlineUserIds] = useState(new Set());
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [inputMessage, setInputMessage] = useState('');
+  const socketRef = useRef(null);
+  const messagesLoadedRef = useRef(false); // track if we've loaded from localStorage
+
+  //Loading messages from localStorage on mount (run only once)
+  useEffect(() => {
+    if (!messagesLoadedRef.current) {
+      const saved = localStorage.getItem('chatMessages');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setMessages(parsed);
+          console.log('Loaded messages from localStorage:', parsed.length);
+        } catch (e) {
+          console.error('Failed to parse saved messages', e);
+        }
+      }
+      messagesLoadedRef.current = true;
     }
-  ])
+  }, []);
 
-  const [selectedChat, setSelectedChat] = useState(1)
-  const [inputMessage, setInputMessage] = useState('')
-  const [chatListOpen, setChatListOpen] = useState(true)
+  // Saving messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('chatMessages', JSON.stringify(messages));
+  }, [messages]);
 
-  const selectedChatData = messages.find(m => m.id === selectedChat)
+  // Fetching all the users from backend
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BASE_URL || 'http://localhost:4000'}/users/all`);
+        const userId = user?._id || user?.email;
+        const filtered = res.data.filter(u => u._id !== userId && u.email !== userId);
+        setAllUsers(filtered);
+      } catch (err) {
+        console.error('Failed to fetch users', err);
+      }
+    };
+    if (user) fetchAllUsers();
+  }, [user]);
+
+  // Socket setup: join and receive events
+  useEffect(() => {
+    if (!user) return;
+    
+    socketRef.current = io(import.meta.env.VITE_BASE_URL || 'http://localhost:4000');
+
+    const userId = user?._id || user?.email || `anon-${Date.now()}`;
+    const name = `${user?.fullname?.firstname || ''} ${user?.fullname?.lastname || ''}`.trim() || user?.email || 'Unknown';
+
+    socketRef.current.emit('join', { userId, name });
+
+    socketRef.current.on('onlineUsers', (list) => {
+      const onlineIds = new Set(list.map(u => u.id));
+      setOnlineUserIds(onlineIds);
+    });
+
+    socketRef.current.on('privateMessage', ({ fromId, message }) => {
+      // incoming message from someone else
+      const msg = {
+        id: `${Date.now()}_${Math.random()}`,
+        from: fromId,
+        to: userId,
+        text: message,
+        time: new Date().toLocaleString(),
+        status: 'received'
+      };
+      // append to existing messages (don't replace)
+      setMessages(prev => [...prev, msg]);
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    };
+  }, [user]);
+
+  // Retry sending pending messages when online list changes
+  useEffect(() => {
+    if (!socketRef.current) return;
+    const userId = user?._id || user?.email;
+    
+    setMessages(prev => {
+      const updated = prev.map(m => {
+        if (m.status === 'pending' && onlineUserIds.has(m.to)) {
+          socketRef.current.emit('privateMessage', { toId: m.to, fromId: m.from, message: m.text });
+          return { ...m, status: 'sent' };
+        }
+        return m;
+      });
+      return updated;
+    });
+  }, [onlineUserIds]); // eslint-disable-line
 
   const handleSendMessage = () => {
-    if (inputMessage.trim()) {
-      setInputMessage('')
+    if (!inputMessage.trim() || !selectedUser) return;
+    const fromId = user?._id || user?.email;
+    const toId = selectedUser._id;
+    const isOnline = onlineUserIds.has(toId);
+
+    const newMsg = {
+      id: `${Date.now()}_${Math.random()}`,
+      from: fromId,
+      to: toId,
+      text: inputMessage.trim(),
+      time: new Date().toLocaleString(),
+      status: isOnline ? 'sent' : 'pending'
+    };
+
+    // store locally first
+    setMessages(prev => [...prev, newMsg]);
+
+    // if online, send immediately
+    if (isOnline && socketRef.current) {
+      socketRef.current.emit('privateMessage', { toId, fromId, message: newMsg.text });
     }
-  }
+
+    setInputMessage('');
+  };
+
+  // helpers to get conversation with selected user
+  const currentUserId = user?._id || user?.email;
+  const conversation = messages.filter(m =>
+    (m.from === currentUserId && m.to === selectedUser?._id) ||
+    (m.to === currentUserId && m.from === selectedUser?._id)
+  );
+
+  // separate online and offline users
+  const onlineUsers = allUsers.filter(u => onlineUserIds.has(u._id));
+  const offlineUsers = allUsers.filter(u => !onlineUserIds.has(u._id));
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Chat List Sidebar */}
-      <div className={`${
-        chatListOpen ? 'block' : 'hidden'
-      } md:block w-full md:w-80 bg-white border-r border-gray-200 overflow-y-auto`}>
-        {/* Messages Header */}
-        <div className="p-4 border-b border-gray-200 sticky top-0 bg-white">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Messages</h2>
-            <button
-              onClick={() => setChatListOpen(false)}
-              className="md:hidden text-gray-600"
-            >
-              <svg className="w-6 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex items-center bg-blue-50 rounded-lg px-3 py-2">
-            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search Chats....."
-              className="bg-transparent ml-2 w-full text-sm outline-none text-gray-600 placeholder-gray-400"
-            />
-          </div>
-        </div>
+      <div className="w-80 bg-white border-r p-2 overflow-y-auto">
+        <h2 className="font-bold mb-2 text-green-600">Online ({onlineUsers.length})</h2>
+        {onlineUsers.map(u => (
+          <button key={u._id} onClick={() => setSelectedUser(u)} className={`w-full text-left p-2 rounded mb-1 ${selectedUser?._id === u._id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-green-400 text-white flex items-center justify-center text-xs font-semibold">
+                {(u.fullname?.firstname || u.email || 'U')[0].toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-sm">{u.fullname?.firstname} {u.fullname?.lastname}</div>
+                <div className="text-xs text-green-600">● Online</div>
+              </div>
+            </div>
+          </button>
+        ))}
 
-        {/* Chat List */}
-        <div className="divide-y divide-gray-100">
-          {messages.map((msg) => (
-            <button
-              key={msg.id}
-              onClick={() => {
-                setSelectedChat(msg.id)
-                setChatListOpen(false)
-              }}
-              className={`w-full p-2.5 text-left transition-colors ${
-                selectedChat === msg.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center font-semibold shrink-0 text-sm">
-                  {msg.avatar}
+        <h2 className="font-bold mb-2 mt-4 text-gray-600">Offline ({offlineUsers.length})</h2>
+        {offlineUsers.map(u => (
+          <button key={u._id} onClick={() => setSelectedUser(u)} className={`w-full text-left p-2 rounded mb-1 ${selectedUser?._id === u._id ? 'bg-blue-50' : ''}`}>
+            <div className="flex items-center gap-2 opacity-80">
+              <div className="w-8 h-8 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-semibold">
+                {(u.fullname?.firstname || u.email || 'U')[0].toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-sm">{u.fullname?.firstname} {u.fullname?.lastname}</div>
+                <div className="text-xs text-gray-500">● Offline</div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 flex flex-col">
+        {selectedUser ? (
+          <>
+            <div className="bg-white border-b p-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${onlineUserIds.has(selectedUser._id) ? 'bg-green-400' : 'bg-gray-400'}`}>
+                  {(selectedUser.fullname?.firstname || selectedUser.email || 'U')[0].toUpperCase()}
                 </div>
-                
-                {/* Message Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-gray-800 truncate text-sm">{msg.name}</h3>
-                    {msg.status === 'online' && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 truncate">{msg.role}</p>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-xs text-gray-500">{msg.time}</p>
-                    {msg.unread && (
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    )}
+                <div>
+                  <div className="font-semibold">{selectedUser.fullname?.firstname} {selectedUser.fullname?.lastname}</div>
+                  <div className={`text-xs ${onlineUserIds.has(selectedUser._id) ? 'text-green-600' : 'text-gray-500'}`}>
+                    {onlineUserIds.has(selectedUser._id) ? '● Online' : '● Offline'}
                   </div>
                 </div>
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat Window */}
-      <div className={`${
-        chatListOpen ? 'hidden' : 'flex'
-      } md:flex flex-1 flex-col bg-white`}>
-        {/* Chat Header */}
-        <div className="border-b border-gray-200 p-3 md:p-4 flex items-center justify-between bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <button
-              onClick={() => setChatListOpen(true)}
-              className="md:hidden text-gray-600 shrink-0"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-linear-to-br from-gray-400 to-gray-600 text-white flex items-center justify-center font-semibold shrink-0 text-sm md:text-base">
-              {selectedChatData?.avatar}
             </div>
-            <div className="min-w-0">
-              <h3 className="font-semibold text-gray-800 truncate text-sm md:text-base">{selectedChatData?.name}</h3>
-              <p className="text-xs md:text-sm text-gray-500 truncate">{selectedChatData?.role}</p>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {conversation.length > 0 ? (
+                conversation.map(m => (
+                  <div key={m.id} className={`mb-3 ${m.from === currentUserId ? 'text-right' : 'text-left'}`}>
+                    <div className={`inline-block px-3 py-2 rounded ${m.from === currentUserId ? 'bg-blue-300' : 'bg-gray-200'}`}>
+                      <div className="text-sm">{m.text}</div>
+                      <div className="text-xs text-gray-600">
+                        {m.time} {m.from === currentUserId && <span className="ml-2 text-xs">[{m.status}]</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500">No messages yet</div>
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4 shrink-0">
-            <button className="text-gray-600 hover:text-gray-800 p-1 md:p-2">
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            <button className="text-gray-600 hover:text-gray-800 p-1 md:p-2 hidden sm:block">
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </button>
-            <button className="text-gray-600 hover:text-gray-800 p-1 md:p-2">
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-              </svg>
-            </button>
-          </div>
-        </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {/* Sample messages */}
-          <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-800 rounded-lg px-3 md:px-4 py-2 max-w-xs md:max-w-md">
-              <p className="text-sm">Hey Eric, have you collaborated with Fred yet?</p>
+            <div className="border-t p-3 bg-blue-50">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder={`Message ${selectedUser.fullname?.firstname || selectedUser.email}`}
+                  className="flex-1 border px-3 py-2 rounded"
+                />
+                <button onClick={handleSendMessage} className="px-4 py-2 bg-blue-600 text-white rounded">Send</button>
+              </div>
             </div>
-          </div>
-
-          <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-800 rounded-lg px-3 md:px-4 py-2 max-w-xs md:max-w-md">
-              <p className="text-sm">So.. question. How long has server been unconscious?</p>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <div className="bg-blue-300 text-gray-800 rounded-lg px-3 md:px-4 py-2 max-w-xs md:max-w-md">
-              <p className="text-sm">Oh my god, Chris. The server is not working and it is showing some problem indication...</p>
-            </div>
-          </div>
-
-          <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-800 rounded-lg px-3 md:px-4 py-2 max-w-xs md:max-w-md">
-              <p className="text-sm">Y fear when Chris is here... I've taught you well. You have the right instincts...</p>
-            </div>
-          </div>
-
-          <div className="flex justify-start mt-6 mb-4">
-            <button className="px-3 md:px-4 py-1 bg-gray-100 text-gray-600 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-50">
-              Section 3
-            </button>
-          </div>
-        </div>
-
-        {/* Message Input */}
-        <div className="border-t border-gray-200 p-3 md:p-4 bg-blue-50">
-          <div className="flex items-center gap-2 md:gap-3">
-            <button className="text-blue-500 hover:text-blue-600 shrink-0 p-1">
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-              </svg>
-            </button>
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="What would you like to say?"
-              className="flex-1 bg-white border border-gray-300 rounded-lg px-3 md:px-4 py-2 text-xs md:text-sm outline-none focus:border-blue-500"
-            />
-            <button
-              onClick={handleSendMessage}
-              className="text-gray-600 hover:text-gray-800 shrink-0 p-1"
-            >
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 C22.9702544,11.6889879 22.9702544,11.6889879 22.9702544,11.6889879 L4.13399899,1.16151493 C3.34915502,0.9 2.40734225,1.00636533 1.77946707,1.4776575 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.98722579 L3.03521743,10.4282188 C3.03521743,10.5853161 3.19218622,10.7424135 3.50612381,10.7424135 L16.6915026,11.5279004 C16.6915026,11.5279004 17.1624089,11.5279004 17.1624089,12.0991925 C17.1624089,12.6704847 16.6915026,12.4744748 16.6915026,12.4744748 Z" />
-              </svg>
-            </button>
-          </div>
-        </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500">Select a user to chat</div>
+        )}
       </div>
     </div>
   )
 }
 
-export default Chat
+export default Chat;
