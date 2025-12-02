@@ -25,7 +25,16 @@ const UserLogin = () => {
 
         if(response.status === 200) {
             const data = response.data;
-            setUser(data.user);
+            // normalize and save user
+            const userData = {
+                _id: data.user._id,
+                fullname: {
+                    firstname: data.user.fullname?.firstname || "",
+                    lastname: data.user.fullname?.lastname || ""
+                },
+                email: data.user.email || ""
+            };
+            setUser(userData);
             localStorage.setItem("token", data.token);
             navigate("/profile");
         }
