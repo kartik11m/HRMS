@@ -23,4 +23,14 @@ userController.loginUser
 router.get('/profile', authMiddleware.authUser  , userController.getUserProfile);
 router.get('/logout', authMiddleware.authUser, userController.logoutUser);
 
+router.get('/all', async (req, res) => {
+  try {
+    const userModel = require('../models/user.model');
+    const users = await userModel.find({}, { password: 0 }); // exclude password
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch users', error: error.message });
+  }
+});
+
 module.exports = router;
