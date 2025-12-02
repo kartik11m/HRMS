@@ -29,10 +29,17 @@ const UserSignup = () => {
 
         if(response.status === 201) {
             const data = response.data;
-
-            setUser(data.user);
+            // normalize and save user
+            const userData = {
+                _id: data.user._id,
+                fullname: {
+                    firstname: data.user.fullname?.firstname || "",
+                    lastname: data.user.fullname?.lastname || ""
+                },
+                email: data.user.email || ""
+            };
+            setUser(userData);
             localStorage.setItem("token", data.token);
-            // Redirect to home page after successful signup
             navigate("/profile");
         }
         // setUserData({ 
