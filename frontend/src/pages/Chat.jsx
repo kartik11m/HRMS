@@ -18,6 +18,7 @@ const Chat = () => {
   const [unreadCounts, setUnreadCounts] = useState({}); // { userId: count }
   const [totalUnread, setTotalUnread] = useState(0); // total unread count
 
+  
   const socketRef = useRef(null);
   const messagesLoadedRef = useRef(false);
   const handlersRef = useRef({});
